@@ -53,103 +53,123 @@ fun TakePhotoScreen() {
         permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    if (capturedBitmap == null) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(500.dp),
-            factory = { ctx ->
-                val previewView = androidx.camera.view.PreviewView(ctx)
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
-
-                imageCapture = ImageCapture.Builder().build()
-                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-                try {
-                    val cameraProvider = cameraProviderFuture.get()
-                    cameraProvider.unbindAll()
-                    cameraProvider.bindToLifecycle(
-                        ctx as ComponentActivity,
-                        cameraSelector,
-                        preview,
-                        imageCapture
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-
-                previewView
-            }
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(onClick = {
-            val file = File.createTempFile("guava_", ".jpg", context.cacheDir)
-            val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
-
-            imageCapture?.takePicture(
-                outputOptions,
-                executor,
-                object : ImageCapture.OnImageSavedCallback {
-                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                        val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                        capturedBitmap = bitmap
+    // 使用 Box 包裹所有內容，確保它們能正確顯示
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (capturedBitmap == null) {
+            // 相機預覽作為底層
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    val previewView = androidx.camera.view.PreviewView(ctx)
+                    val preview = Preview.Builder().build().also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
                     }
 
-                    override fun onError(e: ImageCaptureException) {
-                        Toast.makeText(context, "❌ 拍照錯誤", Toast.LENGTH_SHORT).show()
+                    imageCapture = ImageCapture.Builder().build()
+                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                    try {
+                        val cameraProvider = cameraProviderFuture.get()
+                        cameraProvider.unbindAll()
+                        cameraProvider.bindToLifecycle(
+                            ctx as ComponentActivity,
+                            cameraSelector,
+                            preview,
+                            imageCapture
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
+
+                    previewView
                 }
             )
-        }) {
-            Text("📸 拍照")
-        }
-    } else {
-        Image(
-            bitmap = capturedBitmap!!.asImageBitmap(),
-            contentDescription = "已拍攝照片",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp)
-        )
+            
+            // 拍照按鈕放在底部中央
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 32.dp),
+                contentAlignment = androidx.compose.ui.Alignment.BottomCenter
+            ) {
+                Button(
+                    onClick = {
+                        val file = File.createTempFile("guava_", ".jpg", context.cacheDir)
+                        val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
 
-        Row(modifier = Modifier.padding(top = 16.dp)) {
-            Button(onClick = {
-                val file = File.createTempFile("upload_", ".jpg", context.cacheDir)
-                FileOutputStream(file).use {
-                    capturedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                        imageCapture?.takePicture(
+                            outputOptions,
+                            executor,
+                            object : ImageCapture.OnImageSavedCallback {
+                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                    val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
+                                    capturedBitmap = bitmap
+                                }
+
+                                override fun onError(e: ImageCaptureException) {
+                                    Toast.makeText(context, "❌ 拍照錯誤", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                    },
+                    modifier = Modifier
+                        .height(64.dp)
+                        .width(200.dp)
+                ) {
+                    Text("📸 拍照", style = MaterialTheme.typography.titleMedium)
                 }
-
-                val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                val multipart = MultipartBody.Part.createFormData("image", file.name, requestFile)
-
-                Toast.makeText(context, "🚀 偵測中...", Toast.LENGTH_SHORT).show()
-
-                RetrofitClient.apiService.uploadImage(multipart)
-                    .enqueue(object : Callback<UploadResponse> {
-                        override fun onResponse(
-                            call: Call<UploadResponse>,
-                            response: Response<UploadResponse>
-                        ) {
-                            val result = response.body()?.result ?: "⚠️ 沒有回傳內容"
-                            Toast.makeText(context, result, Toast.LENGTH_LONG).show()
-                        }
-
-                        override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
-                            Toast.makeText(context, "❌ 上傳失敗", Toast.LENGTH_SHORT).show()
-                        }
-                    })
-            }) {
-                Text("✅ 使用這張")
             }
+        } else {
+            // 顯示已拍攝的照片
+            Image(
+                bitmap = capturedBitmap!!.asImageBitmap(),
+                contentDescription = "已拍攝照片",
+                modifier = Modifier.fillMaxSize()
+            )
 
-            Spacer(Modifier.width(16.dp))
+            // 底部按鈕
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 32.dp),
+                contentAlignment = androidx.compose.ui.Alignment.BottomCenter
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Button(onClick = {
+                        val file = File.createTempFile("upload_", ".jpg", context.cacheDir)
+                        FileOutputStream(file).use {
+                            capturedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                        }
 
-            Button(onClick = { capturedBitmap = null }) {
-                Text("🔁 重新拍攝")
+                        val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                        val multipart = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+                        Toast.makeText(context, "🚀 偵測中...", Toast.LENGTH_SHORT).show()
+
+                        RetrofitClient.apiService.uploadImage(multipart)
+                            .enqueue(object : Callback<UploadResponse> {
+                                override fun onResponse(
+                                    call: Call<UploadResponse>,
+                                    response: Response<UploadResponse>
+                                ) {
+                                    val result = response.body()?.result ?: "⚠️ 沒有回傳內容"
+                                    Toast.makeText(context, result, Toast.LENGTH_LONG).show()
+                                }
+
+                                override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
+                                    Toast.makeText(context, "❌ 上傳失敗", Toast.LENGTH_SHORT).show()
+                                }
+                            })
+                    }) {
+                        Text("✅ 使用這張")
+                    }
+
+                    Button(onClick = { capturedBitmap = null }) {
+                        Text("🔁 重新拍攝")
+                    }
+                }
             }
         }
     }
