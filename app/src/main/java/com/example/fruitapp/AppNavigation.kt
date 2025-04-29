@@ -40,12 +40,13 @@ import androidx.navigation.compose.rememberNavController
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-
+    //浮現螢幕上不會消失
     Scaffold(
         bottomBar = {
             BottomBar(navController)
         }
-    ) { innerPadding ->
+    ) { innerPadding ->//內容
+        //控制器主持人
         NavHost(
             navController = navController,
             startDestination = "home",
@@ -57,6 +58,7 @@ fun AppNavigation() {
     }
 }
 
+//固定底部導覽列
 @Composable
 fun BottomBar(navController: NavHostController) {
     BottomAppBar {

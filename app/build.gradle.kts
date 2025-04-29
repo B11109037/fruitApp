@@ -56,6 +56,10 @@ dependencies {
     implementation ("com.google.android.gms:play-services-maps:18.1.0")
     implementation("com.google.maps.android:maps-compose:2.11.4")//加入map
 
+    implementation("com.google.android.libraries.places:places:3.3.0")//加入map中place
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")//map中目前位置
+    implementation("com.google.accompanist:accompanist-permissions:0.28.0")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

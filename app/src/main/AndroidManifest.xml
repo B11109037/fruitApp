@@ -8,7 +8,9 @@
 
 <!--    map權限-->
     <uses-permission android:name="android.permission.INTERNET"/>
-
+<!--map目前位置權限-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:allowBackup="true"
@@ -21,6 +23,10 @@
         android:theme="@style/Theme.FruitApp"
 
         tools:targetApi="31">
+<!--        加入google map API-->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAuEoMZPDV9xWY1F7-ghm_xYG9X-uvhpWc" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
