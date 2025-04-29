@@ -104,7 +104,7 @@ fun MapScreen() {
     //找尋權限
     val locationPermission = rememberPermissionState(android.Manifest.permission.ACCESS_FINE_LOCATION)
     //測試座標
-    val taipei101 = LatLng(24.994601194866757, 121.5135095896032)
+    val taipei101 = LatLng(25.01337780019572, 121.54053362549432)
 
     // ➕ 新增 flag，避免多次初始化
     var placesInitialized by remember { mutableStateOf(false) }
@@ -149,12 +149,12 @@ fun MapScreen() {
                     .addOnSuccessListener { response ->
                         for (placeLikelihood in response.placeLikelihoods) {
                             val place = placeLikelihood.place
-//                            if (place.types?.contains(Place.Type.GROCERY_OR_SUPERMARKET) == true) {
-//                                Log.d("NearbyPlace", "找到水果行: ${place.name} at ${place.latLng}")
-//                                nearbyPlaces.add(place)//存入
-//                            }
-                            Log.d("NearbyPlace", "名稱：${place.name}, 種類：${place.types}, 座標：${place.latLng}")
-                            place.latLng?.let { nearbyPlaces.add(place) }
+                            if (place.types?.contains(Place.Type.GROCERY_OR_SUPERMARKET) == true) {
+                                Log.d("NearbyPlace", "找到水果行: ${place.name} at ${place.latLng}")
+                                nearbyPlaces.add(place)//存入
+                            }
+//                            Log.d("NearbyPlace", "名稱：${place.name}, 種類：${place.types}, 座標：${place.latLng}")
+//                            place.latLng?.let { nearbyPlaces.add(place) }
                         }
                     }
                     .addOnFailureListener { exception ->
