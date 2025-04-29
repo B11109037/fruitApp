@@ -21,6 +21,12 @@
         android:theme="@style/Theme.FruitApp"
 
         tools:targetApi="31">
+
+        <!--    map金鑰-->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAuEoMZPDV9xWY1F7-ghm_xYG9X-uvhpWc" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
