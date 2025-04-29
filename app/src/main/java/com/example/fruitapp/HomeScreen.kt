@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,12 +25,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -60,12 +64,33 @@ val drawerItems = listOf(
     )
 )
 
+// 底部導航項目
+data class BottomNavItem(
+    val title: String,
+    val icon: ImageVector,
+    val route: String
+)
+
+val bottomNavItems = listOf(
+    BottomNavItem(
+        title = "相機",
+        icon = Icons.Filled.ThumbUp,
+        route = "camera"
+    ),
+    BottomNavItem(
+        title = "相簿",
+        icon = Icons.Filled.Menu,
+        route = "album"
+    )
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(navController: NavHostController?) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var selectedRoute by remember { mutableStateOf("home") } // 預設為 "home" 頁面
+    var selectedRoute by remember { mutableStateOf("home") } // 側邊選單選中的路由
+    var selectedBottomTab by remember { mutableStateOf("camera") } // 底部導航選中的路由
 
     // 最外層使用 ModalNavigationDrawer 以確保抽屜正確顯示
     ModalNavigationDrawer(
@@ -109,7 +134,7 @@ fun HomeScreen(navController: NavHostController) {
                     title = { 
                         Text(
                             when (selectedRoute) {
-                                "home" -> "水果辨識"
+                                "home" -> if (selectedBottomTab == "camera") "水果辨識" else "相簿"
                                 "profile" -> "個人資料"
                                 "settings" -> "設定"
                                 else -> "水果辨識應用"
@@ -127,6 +152,21 @@ fun HomeScreen(navController: NavHostController) {
                     }
                 )
             },
+            // 添加底部導航列
+            bottomBar = {
+                if (selectedRoute == "home") {
+                    NavigationBar {
+                        bottomNavItems.forEach { item ->
+                            NavigationBarItem(
+                                icon = { Icon(item.icon, contentDescription = item.title) },
+                                label = { Text(item.title) },
+                                selected = selectedBottomTab == item.route,
+                                onClick = { selectedBottomTab = item.route }
+                            )
+                        }
+                    }
+                }
+            },
             // 確保 Scaffold 背景是透明的
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onBackground
@@ -138,7 +178,13 @@ fun HomeScreen(navController: NavHostController) {
                     .padding(innerPadding)
             ) {
                 when (selectedRoute) {
-                    "home" -> TakePhotoScreen() // 在內容區域直接顯示拍照畫面
+                    "home" -> {
+                        // 根據底部選項卡顯示相機或相簿
+                        when (selectedBottomTab) {
+                            "camera" -> CameraScreen() // 改為新名稱
+                            "album" -> GalleryScreen() // 改為新名稱
+                        }
+                    }
                     "profile" -> Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -189,5 +235,37 @@ fun SettingsScreenContent() {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text("此處可以進行應用程式的相關設定")
+    }
+}
+
+// 使用新名稱，避免重複定義
+@Composable
+fun CameraScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "相機功能待實現",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+// 使用新名稱，避免重複定義
+@Composable
+fun GalleryScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "相簿功能待實現",
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }

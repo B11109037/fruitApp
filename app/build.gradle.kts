@@ -83,5 +83,9 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.0")
 
 // Jetpack Compose 支援 CameraView
-    implementation("androidx.camera:camera-view:1.3.0")
+    implementation("androidx.camera:camera-view:1.2.3")
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-extensions:1.3.1")
 }
