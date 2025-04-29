@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -20,8 +19,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,7 +26,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,41 +35,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
-
-
-//@Composable
-//fun HomeScreen(navController: NavHostController) {
-//    Scaffold(
-//        bottomBar = { MyNavigationBar() }
-//    ) { innerPadding ->
-//        Column(
-//            modifier = Modifier
-//                .padding(innerPadding)
-//                .padding(16.dp)
-//        ) {
-//            Text("Content for the Home Screen goes here")
-//        }
-//    }
-//    TakePhotoScreen()
-//}
-//
-//@Composable
-//fun MyNavigationBar() {
-//    var selectedItem by remember { mutableIntStateOf(0) }
-//    val items = listOf("Home", "Profile", "Settings")
-//    val icons = listOf(Icons.Filled.Home, Icons.Filled.Person, Icons.Filled.Settings)
-//
-//    NavigationBar {
-//        items.forEachIndexed { index, item ->
-//            NavigationBarItem(
-//                icon = { Icon(icons[index], contentDescription = item) },
-//                label = { Text(item) },
-//                selected = selectedItem == index,
-//                onClick = { selectedItem = index }
-//            )
-//        }
-//    }
-//}
 
 data class DrawerItem(
     val title: String,
