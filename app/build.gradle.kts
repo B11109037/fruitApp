@@ -58,7 +58,11 @@ dependencies {
 
     implementation("com.google.android.libraries.places:places:3.3.0")//加入map中place
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")//map中目前位置
-    implementation("com.google.accompanist:accompanist-permissions:0.28.0")
+
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")//http請求程式庫
+    implementation("com.google.android.gms:play-services-location:21.0.1")//取得使用者的GPS定位
+
+
 
 
     testImplementation(libs.junit)
