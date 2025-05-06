@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.fruitapp.api.RetrofitClient
 import com.example.fruitapp.api.UploadResponse
+import com.google.android.libraries.places.api.Places
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -34,6 +35,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FruitAppTheme {
+                // 初始化 Places
+                if (!Places.isInitialized()) {
+                    Places.initialize(applicationContext, "AIzaSyAuEoMZPDV9xWY1F7-ghm_xYG9X-uvhpWc")
+                }
                 AppNavigation()
             }
         }

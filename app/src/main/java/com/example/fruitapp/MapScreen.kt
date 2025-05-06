@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalPermissionsApi::class)
+
 package com.example.fruitapp
+import android.content.Context
+import android.os.Looper
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
@@ -7,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,9 +28,18 @@ import okhttp3.Request
 // JSON 處理
 import org.json.JSONObject
 
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.fruitapp.network.RetrofitInstance
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.model.RectangularBounds
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import com.google.android.libraries.places.api.net.PlacesClient
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MapScreen() {
     //目前的位置
@@ -38,29 +50,46 @@ fun MapScreen() {
     val locationPermission = rememberPermissionState(android.Manifest.permission.ACCESS_FINE_LOCATION)
     //記住目前位置
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
-    //記住附近的地點
-    val nearbyPlaces = remember { mutableStateListOf<Pair<String, LatLng>>() }
+    //方便直接使用camera
+    val coroutineScope = rememberCoroutineScope()
 
+    var searchResults by remember { mutableStateOf<List<Pair<String, LatLng>>>(emptyList()) }
 
+    val apiKey = "AIzaSyAuEoMZPDV9xWY1F7-ghm_xYG9X-uvhpWc"
     // 請求定位權限
     LaunchedEffect(Unit) {
         locationPermission.launchPermissionRequest()
     }
 
-    // 拿目前定位
+    // ✅ 改用即時定位 requestLocationUpdates（避免 lastLocation 為 null）
     LaunchedEffect(locationPermission.status) {
         if (locationPermission.status.isGranted) {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                location?.let {
-                    currentLocation = LatLng(it.latitude, it.longitude)
+            //高精準度GPS每1秒確認一次位置更新
+            val locationRequest = com.google.android.gms.location.LocationRequest.create().apply {
+                interval = 0   // 不需要重複更新
+                numUpdates = 1 //  只要一次更新
+            }
+            //if回傳位置就會觸發callback
+            val locationCallback = object : com.google.android.gms.location.LocationCallback() {
+                override fun onLocationResult(result: com.google.android.gms.location.LocationResult) {
+                    result.lastLocation?.let {
+                        currentLocation = LatLng(it.latitude, it.longitude)
+                        Log.d("MapScreen", "✅ 即時定位取得: ${it.latitude}, ${it.longitude}")
+                    } ?: Log.e("MapScreen", "❌ 無法取得位置（可能尚未設定 GPS 模擬定位）")
                 }
             }
+
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
         }
     }
 
     // 建立地圖相機
     val cameraPositionState = rememberCameraPositionState()
-   //讓相機移動到GPS定位初始位置
+    //讓相機移動到GPS定位初始位置
     LaunchedEffect(currentLocation) {
         currentLocation?.let {
             cameraPositionState.animate(
@@ -69,6 +98,29 @@ fun MapScreen() {
             )
         }
     }
+    // 使用 Text Search API 搜尋附近水果店
+    LaunchedEffect(currentLocation) {
+        currentLocation?.let { location ->
+            coroutineScope.launch {
+                try {
+                    val response = RetrofitInstance.api.searchPlaces(
+                        query = "水果",
+                        location = "${location.latitude},${location.longitude}",
+                        radius = 500, // 調整搜尋範圍（公尺）
+                        apiKey = apiKey
+                    )
+                    searchResults = response.results.map {
+                        it.name to LatLng(it.geometry.location.lat, it.geometry.location.lng)
+                    }
+                    Log.d("TextSearch", "✅ 找到 ${searchResults.size} 間水果店")
+                } catch (e: Exception) {
+                    Log.e("TextSearch", "❌ 搜尋錯誤: ${e.message}")
+                }
+            }
+        }
+    }
+
+
 
     // 顯示地圖 + 使用者位置 Marker
     GoogleMap(
@@ -76,107 +128,52 @@ fun MapScreen() {
         cameraPositionState = cameraPositionState
     ) {
         currentLocation?.let {
+            Log.d("MapScreen", "地圖顯示標記位置: ${it.latitude}, ${it.longitude}")
             Marker(
                 state = MarkerState(position = it),
                 title = "你在這裡"
             )
         }
-
+        // 顯示搜尋結果
+        searchResults.forEach { (name, latLng) ->
+            Marker(
+                state = MarkerState(position = latLng),
+                title = name
+            )
+        }
     }
 }
 
-
-
-
-
-
-
+//// 👉 搜尋附近水果地點的函式
+//suspend fun searchNearbyFruitShops(
+//    context: Context,
+//    location: LatLng,
+//    placesClient: PlacesClient
+//): List<Pair<String, LatLng>> {
+//    val request = FindAutocompletePredictionsRequest.builder()
+//        .setQuery("fruit store")
+//        .setLocationBias(
+//            RectangularBounds.newInstance(
+//                //設定附近範圍附近300公尺
+//                LatLng(location.latitude - 0.003, location.longitude - 0.003),
+//                LatLng(location.latitude + 0.003, location.longitude + 0.003)
+//            )
+//        )
+//        .build()
 //
-//@OptIn(ExperimentalPermissionsApi::class)
-//@Composable
-//fun MapScreen() {
-//    val context = LocalContext.current
-//    //找尋權限
-//    val locationPermission = rememberPermissionState(android.Manifest.permission.ACCESS_FINE_LOCATION)
-//    //測試座標
-//    val taipei101 = LatLng(25.01337780019572, 121.54053362549432)
+//    return try {
+//        val result = placesClient.findAutocompletePredictions(request).await()
+//        result.autocompletePredictions.mapNotNull { prediction ->
+//            val placeId = prediction.placeId
+//            val name = prediction.getPrimaryText(null).toString()
 //
-//    // ➕ 新增 flag，避免多次初始化
-//    var placesInitialized by remember { mutableStateOf(false) }
-//
-//    //記住MARK水果行
-//    val nearbyPlaces = remember { mutableStateListOf<Place>() }
-//
-//
-//    //找尋權限要求
-//    LaunchedEffect(Unit) {
-//        locationPermission.launchPermissionRequest()
-//    }
-//
-//    // ✅ 初始化 Places 一次（只做一次）
-//    LaunchedEffect(Unit) {
-//        if (!Places.isInitialized()) {
-//            try {
-//                Places.initialize(context, "AIzaSyAuEoMZPDV9xWY1F7-ghm_xYG9X-uvhpWc")
-//                placesInitialized = true
-//                Log.d("MapScreen", "Places 初始化完成")
-//            } catch (e: Exception) {
-//                Log.e("MapScreen", "Places 初始化失敗：${e.message}")
-//            }
-//        } else {
-//            placesInitialized = true
+//            val placeRequest = FetchPlaceRequest.builder(placeId, listOf(Place.Field.LAT_LNG)).build()
+//            val placeResponse = placesClient.fetchPlace(placeRequest).await()
+//            val latLng = placeResponse.place.latLng
+//            if (latLng != null) name to latLng else null
 //        }
-//    }
-//
-//    // ✅ 只有在已初始化且有權限時才搜尋地點
-//    LaunchedEffect(placesInitialized, locationPermission.status) {
-//        if (placesInitialized && locationPermission.status.isGranted) {
-//            try {
-//                val placesClient = Places.createClient(context)
-//                val placeFields = listOf(
-//                    Place.Field.NAME,
-//                    Place.Field.LAT_LNG,
-//                    Place.Field.TYPES
-//                )
-//                val request = FindCurrentPlaceRequest.newInstance(placeFields)
-//                //去google找水果行的位置
-//                placesClient.findCurrentPlace(request)
-//                    .addOnSuccessListener { response ->
-//                        for (placeLikelihood in response.placeLikelihoods) {
-//                            val place = placeLikelihood.place
-//                            if (place.types?.contains(Place.Type.GROCERY_OR_SUPERMARKET) == true) {
-//                                Log.d("NearbyPlace", "找到水果行: ${place.name} at ${place.latLng}")
-//                                nearbyPlaces.add(place)//存入
-//                            }
-////                            Log.d("NearbyPlace", "名稱：${place.name}, 種類：${place.types}, 座標：${place.latLng}")
-////                            place.latLng?.let { nearbyPlaces.add(place) }
-//                        }
-//                    }
-//                    .addOnFailureListener { exception ->
-//                        Log.e("NearbyPlace", "找地點失敗: $exception")
-//                    }
-//            } catch (e: Exception) {
-//                Log.e("MapScreen", "Places 使用錯誤: ${e.message}")
-//            }
-//        }
-//    }
-//    //記住照相機現在的位置
-//    val cameraPositionState = rememberCameraPositionState {
-//        position = CameraPosition.fromLatLngZoom(taipei101, 15f)
-//    }
-//   //劃出GOOGLE MAP
-//    GoogleMap(
-//        modifier = Modifier.fillMaxSize(),
-//        cameraPositionState = cameraPositionState
-//    ) {
-//        // ➕ 額外畫出附近水果行的 marker
-//        nearbyPlaces.forEach { place ->
-//            place.latLng?.let { latLng ->
-//                Marker(
-//                    state = MarkerState(position = latLng),
-//                    title = place.name ?: "水果行"
-//                )
-//            }
-//        }
+//    } catch (e: Exception) {
+//        Log.e("PlacesSearch", "❌ 搜尋失敗: ${e.message}")
+//        emptyList()
 //    }
 //}
