@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin") version "2.0.1"
+    id("kotlin-kapt")
 }
 
 android {
@@ -65,7 +66,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")//加入 text search
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation(libs.androidx.exifinterface)//加入 text search
 
 
 
@@ -94,7 +96,14 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.0")
     implementation("androidx.camera:camera-view:1.3.0")
 
-// Jetpack Compose 支援 CameraView
+    // Jetpack Compose 支援 CameraView
     implementation("androidx.camera:camera-view:1.3.0")
     implementation("io.coil-kt:coil-compose:2.4.0")
+
+    // Room 核心
+    implementation("androidx.room:room-runtime:2.5.1")
+    // Kotlin 擴充協程支援
+    implementation ("androidx.room:room-ktx:2.5.1")
+    // Annotation Processor
+    kapt ("androidx.room:room-compiler:2.5.1")
 }
