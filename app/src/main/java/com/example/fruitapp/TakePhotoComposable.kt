@@ -1,33 +1,37 @@
 package com.example.fruitapp
 
 import android.Manifest
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
-import android.view.Surface
-import android.view.WindowManager
+import android.net.Uri
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.exifinterface.media.ExifInterface
 import com.example.fruitapp.api.RetrofitClient
 import com.example.fruitapp.api.UploadResponse
-import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -38,174 +42,189 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executor
 
-// Helper：依 EXIF orientation 旋轉 Bitmap
-private fun rotateBitmapIfRequired(path: String, bitmap: Bitmap): Bitmap {
-    val exif = ExifInterface(path)
-    val orientation = exif.getAttributeInt(
-        ExifInterface.TAG_ORIENTATION,
-        ExifInterface.ORIENTATION_NORMAL
-    )
-    val matrix = Matrix().apply {
-        postRotate(
-            when (orientation) {
-                ExifInterface.ORIENTATION_ROTATE_90   -> 90f
-                ExifInterface.ORIENTATION_ROTATE_180  -> 180f
-                ExifInterface.ORIENTATION_ROTATE_270  -> 270f
-                else                                  -> 0f
-            }
-        )
-    }
-    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TakePhotoScreen(viewModel: RecordViewModel) {
+fun TakePhotoScreen() {
     val context = LocalContext.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     val executor: Executor = ContextCompat.getMainExecutor(context)
+
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // Scaffold + SnackbarHostState
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    // 相機權限
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (!granted) {
-            scope.launch { snackbarHostState.showSnackbar("❌ 沒有攝影機權限") }
+            Toast.makeText(context, "❌ 沒有攝影機權限", Toast.LENGTH_SHORT).show()
         }
     }
+
     LaunchedEffect(Unit) {
         permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            if (capturedBitmap == null) {
-                // 相機預覽
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        val previewView = PreviewView(ctx)
-                        val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                        val rotation = wm.defaultDisplay?.rotation ?: Surface.ROTATION_0
-
-                        val preview = Preview.Builder()
-                            .setTargetRotation(rotation)
-                            .build()
-                            .also { it.setSurfaceProvider(previewView.surfaceProvider) }
-
-                        imageCapture = ImageCapture.Builder()
-                            .setTargetRotation(rotation)
-                            .build()
-
-                        try {
-                            val cameraProvider = cameraProviderFuture.get()
-                            cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
-                                ctx as ComponentActivity,
-                                CameraSelector.DEFAULT_BACK_CAMERA,
-                                preview,
-                                imageCapture
-                            )
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-
-                        previewView
+    // 使用 Box 包裹所有內容，確保它們能正確顯示
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (capturedBitmap == null) {
+            // 相機預覽作為底層
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    val previewView = androidx.camera.view.PreviewView(ctx)
+                    val preview = Preview.Builder().build().also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
                     }
-                )
 
-                // 拍照按鈕
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 32.dp),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Button(
-                        onClick = {
-                            val file = File.createTempFile("photo_", ".jpg", context.cacheDir)
-                            val options = ImageCapture.OutputFileOptions.Builder(file).build()
-                            imageCapture?.takePicture(
-                                options,
-                                executor,
-                                object : ImageCapture.OnImageSavedCallback {
-                                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                                        val rawBmp = BitmapFactory.decodeFile(file.absolutePath)
-                                        val fixedBmp = rotateBitmapIfRequired(file.absolutePath, rawBmp)
-                                        capturedBitmap = fixedBmp
-                                    }
-                                    override fun onError(e: ImageCaptureException) {
-                                        scope.launch { snackbarHostState.showSnackbar("❌ 拍照錯誤") }
-                                    }
-                                }
-                            )
-                        },
-                        modifier = Modifier
-                            .height(64.dp)
-                            .width(200.dp)
-                    ) {
-                        Text("📸 拍照", style = MaterialTheme.typography.titleMedium)
+                    imageCapture = ImageCapture.Builder().build()
+                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                    try {
+                        val cameraProvider = cameraProviderFuture.get()
+                        cameraProvider.unbindAll()
+                        cameraProvider.bindToLifecycle(
+                            ctx as ComponentActivity,
+                            cameraSelector,
+                            preview,
+                            imageCapture
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
+
+                    previewView
                 }
+            )
 
-            } else {
-                // 顯示照片
-                Image(
-                    bitmap = capturedBitmap!!.asImageBitmap(),
-                    contentDescription = "已拍攝照片",
-                    modifier = Modifier.fillMaxSize()
-                )
-                // 上傳 / 重拍
+            //黑底層
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(Color.Black.copy(alpha = 0.7f))
+
+            ) {
+                // 拍照按鈕放在底部中央
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 100.dp),
+                    contentAlignment = androidx.compose.ui.Alignment.BottomCenter
+                ) {
+                    IconButton(
+                            onClick = {
+                                val file = File.createTempFile("guava_", ".jpg", context.cacheDir)
+                                val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
+
+                                imageCapture?.takePicture(
+                                    outputOptions,
+                                    executor,
+                                    object : ImageCapture.OnImageSavedCallback {
+                                        override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                            val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
+                                            capturedBitmap = bitmap
+                                        }
+
+                                        override fun onError(e: ImageCaptureException) {
+                                            Toast.makeText(context, "❌ 拍照錯誤", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                ) },
+                            modifier = Modifier
+
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        ) {
+                        }
+                }
+            }
+
+        } else {
+            // 顯示已拍攝的照片
+            Image(
+                bitmap = capturedBitmap!!.asImageBitmap(),
+                contentDescription = "已拍攝照片",
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(Color.Black.copy(alpha = 0.7f))
+
+            ) {
+
+                // 底部按鈕
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(bottom = 32.dp),
-                    contentAlignment = Alignment.BottomCenter
+                    contentAlignment = androidx.compose.ui.Alignment.BottomCenter
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                         Button(onClick = {
                             val file = File.createTempFile("upload_", ".jpg", context.cacheDir)
                             FileOutputStream(file).use {
                                 capturedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, it)
                             }
-                            val req = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                            val part = MultipartBody.Part.createFormData("image", file.name, req)
-                            scope.launch { snackbarHostState.showSnackbar("🚀 偵測中...") }
-                            RetrofitClient.apiService.uploadImage(part)
+
+                            val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                            val multipart = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+                            Toast.makeText(context, "🚀 偵測中...", Toast.LENGTH_SHORT).show()
+
+                            RetrofitClient.apiService.uploadImage(multipart)
                                 .enqueue(object : Callback<UploadResponse> {
                                     override fun onResponse(
                                         call: Call<UploadResponse>,
                                         response: Response<UploadResponse>
                                     ) {
-                                        val message = response.body()?.result ?: "⚠️ 沒有回傳內容"
-                                        scope.launch { snackbarHostState.showSnackbar(message) }
-                                        viewModel.addRecord(message)
+                                        val result = response.body()?.result ?: "⚠️ 沒有回傳內容"
+                                        Toast.makeText(context, result, Toast.LENGTH_LONG).show()
                                     }
+
                                     override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
-                                        scope.launch { snackbarHostState.showSnackbar("❌ 上傳失敗") }
+                                        Toast.makeText(context, "❌ 上傳失敗", Toast.LENGTH_SHORT).show()
                                     }
                                 })
-                        }) {
-                            Text("✅ 使用這張")
+                        } ,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "使用",
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            Text("使用")
                         }
-                        Button(onClick = { capturedBitmap = null }) {
-                            Text("🔁 重新拍攝")
+
+                        Button(onClick = { capturedBitmap = null },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "重新拍攝",
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                            Text("重新拍攝")
                         }
                     }
                 }
             }
+
+
         }
     }
 }
