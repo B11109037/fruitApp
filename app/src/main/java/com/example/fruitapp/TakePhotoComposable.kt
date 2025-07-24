@@ -132,7 +132,7 @@ fun TakePhotoScreen() {
                                 ) },
                             modifier = Modifier
 
-                                .size(72.dp)
+                                .size(90.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
                         ) {

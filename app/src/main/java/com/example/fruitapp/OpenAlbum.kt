@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.example.fruitapp.api.RetrofitClient
 import com.example.fruitapp.api.ApiService
@@ -28,10 +29,10 @@ import retrofit2.Response
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OpenAlbumScreen() {
+fun OpenAlbumScreen(navController: NavHostController,startUri: Uri?) {
+    var selectedUri by remember { mutableStateOf(startUri) }  // 設定初始圖片為傳進來的 URI
     val context = LocalContext.current
     val apiService = RetrofitClient.apiService
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
 
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
@@ -56,11 +57,11 @@ fun OpenAlbumScreen() {
                 .padding(padding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Button(onClick = {
-                launcher.launch(Intent(Intent.ACTION_PICK).apply { type = "image/*" })
-            }) {
-                Text("選擇照片")
-            }
+//            Button(onClick = {
+//                launcher.launch(Intent(Intent.ACTION_PICK).apply { type = "image/*" })
+//            }) {
+//                Text("選擇照片")
+//            }//跳轉畫面將直接刪除
 
             selectedUri?.let { uri ->
                 Image(

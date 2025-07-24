@@ -1,5 +1,9 @@
 package com.example.fruitapp
 
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,8 +49,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
@@ -55,8 +61,23 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavHostController) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
+//    val drawerState = rememberDrawerState(DrawerValue.Closed)
+//    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // 建立圖片 launcher
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val selectedImageUri = result.data?.data
+            selectedImageUri?.let {
+                // 將選擇的圖片 URI 存到 navController 的 SavedState
+                navController.currentBackStackEntry?.savedStateHandle?.set("selectedImageUri", it)
+                navController.navigate("album")
+            }
+        }
+    }
     // 使用 Scaffold 作為主要容器
     Scaffold(
 
@@ -64,14 +85,17 @@ fun HomeScreen(navController: NavHostController) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp)
+                    .height(90.dp)
+                    .padding(top=30.dp)
                    .background(Color.White), // 或你要的背景色
                 contentAlignment = Alignment.Center
             ) {
                 // 中間標題
                 Text(
                     text = "果然會辨識",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize=28.sp
+                    )
                 )
 
                 // 左右 Icon（定位與設定）
@@ -83,10 +107,11 @@ fun HomeScreen(navController: NavHostController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { navController.navigate("map") }) {
-                        Icon(Icons.Default.LocationOn, contentDescription = "地圖")
+                        Icon(Icons.Default.LocationOn, contentDescription = "地圖", modifier = Modifier.size(32.dp))
+
                     }
                     IconButton(onClick = { navController.navigate("settings") }) {
-                        Icon(Icons.Default.Settings, contentDescription = "設定")
+                        Icon(Icons.Default.Settings, contentDescription = "設定",modifier = Modifier.size(32.dp))
                     }
                 }
             }
@@ -98,11 +123,13 @@ fun HomeScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+
+            TakePhotoScreen()
             // 中央拍照邊框
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .offset(y = (-150).dp) // 🡄 往上移動 48dp
+                    .offset(y = (-120).dp) //  往上移動
                     .size(160.dp)
                     .border(
                         width = 4.dp,
@@ -110,59 +137,24 @@ fun HomeScreen(navController: NavHostController) {
                         shape = RoundedCornerShape(24.dp)
                     )
             )
-            TakePhotoScreen()
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(250.dp)
-//                    .align(Alignment.BottomCenter)
-//                    .background(Color.Black.copy(alpha = 0.7f))
-//
-//            ) {
-//                // 底部控制區塊
-//                Row(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .padding(horizontal = 32.dp),
-//                    horizontalArrangement = Arrangement.SpaceBetween,
-//                    verticalAlignment = Alignment.CenterVertically
-//                ) {
-//                    // 左側相簿按鈕
-//                    IconButton(
-//                        onClick = { /* TODO: 開啟相簿 */ },
-//                        modifier = Modifier
-//                            .padding(top = 20.dp)
-//                            .size(56.dp)
-//                            .clip(CircleShape)
-//                            .background(Color.White)
-//                    ) {
-//                        Icon(
-//                            Icons.Default.Settings, contentDescription = "設定"
-//                        )
-//                    }
-////                    // 中間拍照按鈕（額外用 Box 包起來讓它置中）
-////                    Box(
-////                        modifier = Modifier
-////                            .fillMaxWidth()
-////                            .padding(top = 20.dp),
-////                        contentAlignment = Alignment.Center
-////                    ) {
-////                        IconButton(
-////                            onClick = { /* TODO: 拍照功能 */ },
-////                            modifier = Modifier
-////
-////                                .size(72.dp)
-////                                .clip(CircleShape)
-////                                .background(Color.White)
-////                        ) {
-////                            Icon(
-////                                Icons.Default.Settings, contentDescription = "設定"
-////                            )
-////                        }
-////                    }
-//                }
-//            }
-
+            //圖庫
+            IconButton(
+                        onClick = {
+                                    launcher.launch(Intent(Intent.ACTION_PICK).apply {
+                                        type = "image/*"
+                                    })
+                                  },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter) // 先置中
+                            .offset(x = (-120).dp, y = (-110).dp) // 往左移、微微往上
+                            .size(70.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    ) {
+                        Icon(
+                            Icons.Default.Settings, contentDescription = "相簿"
+                        )
+                    }
 
         }
     }

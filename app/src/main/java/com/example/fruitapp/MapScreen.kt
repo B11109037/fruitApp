@@ -7,7 +7,24 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
 import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +46,11 @@ import okhttp3.Request
 import org.json.JSONObject
 
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.example.fruitapp.network.RetrofitInstance
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
@@ -41,7 +63,7 @@ import kotlinx.coroutines.tasks.await
 
 
 @Composable
-fun MapScreen() {
+fun MapScreen(navController: NavHostController) {
     //目前的位置
     val context = LocalContext.current
     //取得定位服務
@@ -59,6 +81,17 @@ fun MapScreen() {
     // 請求定位權限
     LaunchedEffect(Unit) {
         locationPermission.launchPermissionRequest()
+    }
+    // 建立地圖相機
+    val cameraPositionState = rememberCameraPositionState()
+    //讓相機移動到GPS定位初始位置
+    LaunchedEffect(currentLocation) {
+        currentLocation?.let {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(it, 16f),
+                1000
+            )
+        }
     }
 
     // ✅ 改用即時定位 requestLocationUpdates（避免 lastLocation 為 null）
@@ -87,17 +120,6 @@ fun MapScreen() {
         }
     }
 
-    // 建立地圖相機
-    val cameraPositionState = rememberCameraPositionState()
-    //讓相機移動到GPS定位初始位置
-    LaunchedEffect(currentLocation) {
-        currentLocation?.let {
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(it, 16f),
-                1000
-            )
-        }
-    }
     // 使用 Text Search API 搜尋附近水果店
     LaunchedEffect(currentLocation) {
         currentLocation?.let { location ->
@@ -106,7 +128,7 @@ fun MapScreen() {
                     val response = RetrofitInstance.api.searchPlaces(
                         query = "水果",
                         location = "${location.latitude},${location.longitude}",
-                        radius = 500, // 調整搜尋範圍（公尺）
+                        radius = 5, // 調整搜尋範圍（公尺)
                         apiKey = apiKey
                     )
                     searchResults = response.results.map {
@@ -121,59 +143,71 @@ fun MapScreen() {
     }
 
 
+    Scaffold(
 
-    // 顯示地圖 + 使用者位置 Marker
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState
-    ) {
-        currentLocation?.let {
-            Log.d("MapScreen", "地圖顯示標記位置: ${it.latitude}, ${it.longitude}")
-            Marker(
-                state = MarkerState(position = it),
-                title = "你在這裡"
-            )
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .background(Color.Gray.copy(alpha = 0.6f)), // 灰色且透明
+                contentAlignment = Alignment.Center
+            ) {
+                // 中間標題
+                Text(
+                    text = "果然會辨識",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize=28.sp
+                    ) ,
+                    modifier = Modifier.padding(top = 30.dp)
+                )
+
+                // 左Icon（定位與設定）
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
+                        .padding(top = 30.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.navigate("home") }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "主畫面", modifier = Modifier.size(32.dp))
+
+                    }
+
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) {innerPadding ->
+        // 顯示地圖 + 使用者位置 Marker
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState
+        ) {
+            currentLocation?.let {
+                Log.d("MapScreen", "地圖顯示標記位置: ${it.latitude}, ${it.longitude}")
+                Marker(
+                    state = MarkerState(position = it),
+                    title = "你在這裡"
+                )
+            }
+            // 顯示搜尋結果
+            searchResults.forEach { (name, latLng) ->
+                Marker(
+                    state = MarkerState(position = latLng),
+                    title = name
+                )
+            }
         }
-        // 顯示搜尋結果
-        searchResults.forEach { (name, latLng) ->
-            Marker(
-                state = MarkerState(position = latLng),
-                title = name
-            )
-        }
+
     }
+
+
+
 }
 
-//// 👉 搜尋附近水果地點的函式
-//suspend fun searchNearbyFruitShops(
-//    context: Context,
-//    location: LatLng,
-//    placesClient: PlacesClient
-//): List<Pair<String, LatLng>> {
-//    val request = FindAutocompletePredictionsRequest.builder()
-//        .setQuery("fruit store")
-//        .setLocationBias(
-//            RectangularBounds.newInstance(
-//                //設定附近範圍附近300公尺
-//                LatLng(location.latitude - 0.003, location.longitude - 0.003),
-//                LatLng(location.latitude + 0.003, location.longitude + 0.003)
-//            )
-//        )
-//        .build()
-//
-//    return try {
-//        val result = placesClient.findAutocompletePredictions(request).await()
-//        result.autocompletePredictions.mapNotNull { prediction ->
-//            val placeId = prediction.placeId
-//            val name = prediction.getPrimaryText(null).toString()
-//
-//            val placeRequest = FetchPlaceRequest.builder(placeId, listOf(Place.Field.LAT_LNG)).build()
-//            val placeResponse = placesClient.fetchPlace(placeRequest).await()
-//            val latLng = placeResponse.place.latLng
-//            if (latLng != null) name to latLng else null
-//        }
-//    } catch (e: Exception) {
-//        Log.e("PlacesSearch", "❌ 搜尋失敗: ${e.message}")
-//        emptyList()
-//    }
-//}
+
+
+
