@@ -1,7 +1,9 @@
 @file:OptIn(ExperimentalPermissionsApi::class)
 
 package com.example.fruitapp
-import android.content.Context
+
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Looper
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
@@ -18,8 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import com.example.fruitapp.network.RetrofitInstance
 import com.google.android.libraries.places.api.Places
@@ -111,12 +112,20 @@ fun MapScreen(navController: NavHostController) {
                     } ?: Log.e("MapScreen", "❌ 無法取得位置（可能尚未設定 GPS 模擬定位）")
                 }
             }
-
-            fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                Looper.getMainLooper()
-            )
+             //檢查是否有權限，如果沒有要catch
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    fusedLocationClient.requestLocationUpdates(
+                        locationRequest,
+                        locationCallback,
+                        Looper.getMainLooper()
+                    )
+                } catch (e: SecurityException) {
+                    Log.e("MapScreen", "❌ 權限不足，無法啟動定位: ${e.message}")
+                }
+            } else {
+                Log.w("MapScreen", "⚠️ 尚未取得定位權限")
+            }
         }
     }
 
@@ -183,7 +192,9 @@ fun MapScreen(navController: NavHostController) {
     ) {innerPadding ->
         // 顯示地圖 + 使用者位置 Marker
         GoogleMap(
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier.fillMaxSize()
+                .padding(innerPadding),//要使用innerpadding
             cameraPositionState = cameraPositionState
         ) {
             currentLocation?.let {
