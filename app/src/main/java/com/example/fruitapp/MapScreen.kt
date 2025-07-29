@@ -112,7 +112,7 @@ fun MapScreen(navController: NavHostController) {
                     } ?: Log.e("MapScreen", "❌ 無法取得位置（可能尚未設定 GPS 模擬定位）")
                 }
             }
-             //檢查是否有權限，如果沒有要catch
+            //檢查是否有權限，如果沒有要catch
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 try {
                     fusedLocationClient.requestLocationUpdates(
@@ -194,7 +194,7 @@ fun MapScreen(navController: NavHostController) {
         GoogleMap(
             modifier =
                 Modifier.fillMaxSize()
-                .padding(innerPadding),//要使用innerpadding
+                    .padding(innerPadding),//要使用innerpadding
             cameraPositionState = cameraPositionState
         ) {
             currentLocation?.let {
@@ -218,7 +218,6 @@ fun MapScreen(navController: NavHostController) {
 
 
 }
-
 
 
 

@@ -58,14 +58,6 @@ fun MapScreenContent(navController: NavHostController) {
     }
 }
 
-//@Composable
-//fun AlbumScreenContent(navController: NavHostController) {
-//    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-//        OpenAlbumScreen(navController = navController)
-//    }
-//}
-
-
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -84,6 +76,18 @@ fun AppNavigation() {
             val uri = backStackEntry.savedStateHandle?.get<Uri>("selectedImageUri")
             OpenAlbumScreen(navController, startUri = uri)
         }//主畫面點擊按鈕將會直接導入相簿
+        composable("settings") {
+            SettingsScreen(navController = navController)
+        }
+        composable("version_info") {
+            VersionInfoScreen(navController = navController)
+        }
+        composable("history") {
+            HistoryScreen(navController = navController)
+        }
+        composable("user_settings") {
+            UserSettingsScreen(navController = navController)
+        }
     }
 }
 
