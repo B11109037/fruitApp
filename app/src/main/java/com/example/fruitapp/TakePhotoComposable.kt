@@ -2,8 +2,6 @@ package com.example.fruitapp
 
 import android.Manifest
 import android.graphics.Bitmap
-import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -223,8 +220,6 @@ fun TakePhotoScreen() {
                     }
                 }
             }
-
-
         }
     }
 }
