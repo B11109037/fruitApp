@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +53,10 @@ fun HomeScreen(navController: NavHostController) {
             selectedImageUri?.let {
                 // 將選擇的圖片 URI 存到 navController 的 SavedState
                 navController.currentBackStackEntry?.savedStateHandle?.set("selectedImageUri", it)
-                navController.navigate("album")
+                navController.navigate("album") {
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
         }
     }
@@ -136,5 +138,3 @@ fun HomeScreen(navController: NavHostController) {
         }
     }
 }
-
-
