@@ -67,15 +67,15 @@ fun AppNavigation() {
         startDestination = "home"
     ) {
         composable("home") {
-            HomeScreenContent(navController = navController) // 內部有自己的 topBar
+            HomeScreen(navController = navController)
         }
-        composable("map") {
-            MapScreenContent(navController= navController)// 內部設計自己的 topBar
+        composable("camera") {
+            TakePhotoScreen()
         }
         composable("album") { backStackEntry ->
-            val uri = backStackEntry.savedStateHandle?.get<Uri>("selectedImageUri")
-            OpenAlbumScreen(navController, startUri = uri)
-        }//主畫面點擊按鈕將會直接導入相簿
+            val selectedImageUri = backStackEntry.savedStateHandle.get<Uri>("selectedImageUri")
+            OpenAlbumScreen(navController, selectedImageUri)
+        }
         composable("settings") {
             SettingsScreen(navController = navController)
         }

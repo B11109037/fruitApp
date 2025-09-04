@@ -1,5 +1,6 @@
 package com.example.fruitapp
 
+import com.example.fruitapp.Record
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
