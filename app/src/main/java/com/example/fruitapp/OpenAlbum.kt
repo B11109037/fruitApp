@@ -19,15 +19,15 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.fruitapp.api.RetrofitClient
 import com.example.fruitapp.api.ApiService
 import com.example.fruitapp.api.UploadResponse
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,11 +37,10 @@ fun OpenAlbumScreen(navController: NavHostController, startUri: Uri?) {
     var selectedUri by remember { mutableStateOf(savedImageUri ?: startUri) }
     var isUploading by remember { mutableStateOf(false) }
     var uploadResult by remember { mutableStateOf<String?>(null) }
-    
+
     val context = LocalContext.current
-    val apiService = RetrofitClient.apiService
     val database = remember { AppDatabase.getInstance(context) }
-    val recordDao = database.recordDao()
+    val apiService = RetrofitClient.apiService
 
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
@@ -121,8 +120,7 @@ fun OpenAlbumScreen(navController: NavHostController, startUri: Uri?) {
                                 uri = uri,
                                 apiService = apiService,
                                 context = context,
-                                recordDao = recordDao,
-                                scope = scope,
+                                database = database,
                                 onUploadStart = {
                                     isUploading = true
                                     uploadResult = null
@@ -179,8 +177,7 @@ private fun uploadImageWithSnackbar(
     uri: Uri,
     apiService: ApiService,
     context: android.content.Context,
-    recordDao: RecordDao,
-    scope: kotlinx.coroutines.CoroutineScope,
+    database: AppDatabase,
     onUploadStart: () -> Unit,
     onShowSnackbar: (String) -> Unit,
     onUploadComplete: (String) -> Unit
@@ -205,43 +202,31 @@ private fun uploadImageWithSnackbar(
                 onShowSnackbar("✅ 辨識完成")
                 onUploadComplete(result)
                 
-                // 如果辨識成功且不是錯誤訊息，保存到資料庫
-                if (!result.startsWith("❌") && !result.startsWith("⚠️") && result.isNotBlank()) {
-                    scope.launch(Dispatchers.IO) {
+                // 如果辨識成功，保存到資料庫
+                if (!result.startsWith("❌") && !result.startsWith("⚠️")) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                         try {
                             val record = Record(
                                 timestamp = System.currentTimeMillis(),
-                                message = "相簿辨識：$result"
+                                message = "辨識結果：$result"
                             )
-                            val insertedId = recordDao.insert(record)
-                            Log.d("Database", "已保存相簿辨識結果到資料庫: $result, ID: $insertedId")
-                            
-                            // 驗證是否真的插入成功
-                            withContext(Dispatchers.Main) {
-                                onShowSnackbar("💾 已保存到歷史紀錄")
-                            }
+                            database.recordDao().insert(record)
+                            Log.d("History", "已保存歷史紀錄: $result")
                         } catch (e: Exception) {
-                            Log.e("Database", "保存到資料庫失敗: ${e.message}", e)
-                            withContext(Dispatchers.Main) {
-                                onShowSnackbar("⚠️ 保存失敗: ${e.message}")
-                            }
+                            Log.e("History", "保存歷史紀錄失敗: ${e.message}")
                         }
                     }
-                } else {
-                    Log.d("Database", "不保存錯誤結果: $result")
                 }
             }
 
             override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
                 val errorMsg = "❌ 上傳失敗：${t.message}"
-                Log.e("API", "上傳失敗", t)
                 onShowSnackbar(errorMsg)
                 onUploadComplete(errorMsg)
             }
         })
     } ?: run {
         val errorMsg = "❌ 無法讀取檔案"
-        Log.e("API", errorMsg)
         onShowSnackbar(errorMsg)
         onUploadComplete(errorMsg)
     }
