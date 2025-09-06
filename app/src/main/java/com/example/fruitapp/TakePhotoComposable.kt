@@ -101,7 +101,8 @@ fun TakePhotoScreen() {
             if (capturedBitmap == null) {
                 // ======== 預覽與拍照區 ========
                 AndroidView(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
+                              .offset(y = (-45).dp),//
                     factory = { ctx ->
                         val previewView = androidx.camera.view.PreviewView(ctx)
                         val preview = Preview.Builder().build().also {
@@ -134,7 +135,7 @@ fun TakePhotoScreen() {
                         .fillMaxWidth()
                         .height(250.dp)
                         .align(Alignment.BottomCenter)
-                        .background(Color.Black.copy(alpha = 0.7f))
+                        .background(Color.Black)
                 ) {
                     // 拍照按鈕
                     Box(
@@ -182,6 +183,7 @@ fun TakePhotoScreen() {
                     bitmap = capturedBitmap!!.asImageBitmap(),
                     contentDescription = "已拍攝照片",
                     modifier = Modifier.fillMaxSize()
+                        .offset(y = (-160).dp),//移動位置
                 )
                 Box(
                     modifier = Modifier

@@ -9,12 +9,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -60,6 +63,8 @@ fun HomeScreen(navController: NavHostController) {
             }
         }
     }
+
+
     // 使用 Scaffold 作為主要容器
     Scaffold(
         topBar = {
@@ -67,8 +72,8 @@ fun HomeScreen(navController: NavHostController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(90.dp)
-                    .padding(top=30.dp)
-                   .background(Color.White), // 或你要的背景色
+                    .background(Color.Gray.copy(alpha = 0.6f))// 灰色且透明, // 或你要的背景色
+                    ,//如果要往下移可以padding
                 contentAlignment = Alignment.Center
             ) {
                 // 中間標題
@@ -76,14 +81,16 @@ fun HomeScreen(navController: NavHostController) {
                     text = "果然會辨識",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize=28.sp
-                    )
+                    ),
+                    modifier = Modifier.padding(top = 30.dp)
                 )
 
                 // 左右 Icon（定位與設定）
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
+                        .padding(horizontal = 12.dp)
+                        .padding(top = 30.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -126,7 +133,7 @@ fun HomeScreen(navController: NavHostController) {
                           },
                 modifier = Modifier
                     .align(Alignment.BottomCenter) // 先置中
-                    .offset(x = (-120).dp, y = (-110).dp) // 往左移、微微往上
+                    .offset(x = (-120).dp, y = (-135).dp) // 往左移、微微往上
                     .size(70.dp)
                     .clip(CircleShape)
                     .background(Color.White)
