@@ -68,7 +68,8 @@ dependencies {
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation(libs.androidx.exifinterface)//加入 text search
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.compose.ui.unit)//加入 text search
 
 
 
