@@ -77,9 +77,9 @@ fun VersionInfoScreen(navController: NavHostController) {
                     
                     Divider()
                     
-                    InfoRow("版本號", "1.0.0")
+                    InfoRow("版本號", "1.0.9")
                     InfoRow("版本代碼", "1")
-                    InfoRow("開發者", "果然團隊")
+                    InfoRow("開發者", "果然是一個團隊")
                     InfoRow("最後更新", "2025年9月")
                     InfoRow("SDK版本", "Android 14 (API 35)")
                     InfoRow("最低支援", "Android 7.0 (API 24)")
@@ -95,7 +95,7 @@ fun VersionInfoScreen(navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "功能特色，好瑟///",
+                        text = "本系統的功能特色",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold
                         )
