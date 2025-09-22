@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,8 +18,12 @@ import androidx.navigation.NavHostController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserSettingsScreen(navController: NavHostController) {
-    var isDarkMode by remember { mutableStateOf(false) }
+fun UserSettingsScreen(
+    navController: NavHostController,
+    isDarkMode: Boolean,
+    onThemeChange: (Boolean) -> Unit
+) {
+//    var isDarkMode by remember { mutableStateOf(false) }
     var isNotificationEnabled by remember { mutableStateOf(true) }
     var isAutoUploadEnabled by remember { mutableStateOf(false) }
     
@@ -79,12 +84,12 @@ fun UserSettingsScreen(navController: NavHostController) {
                             fontWeight = FontWeight.Bold
                         )
                     )
-                    
+
                     SettingItem(
                         title = "深色模式",
-                        description = "啟用深色主題",
+                        description = "切換應用程式為深色主題",
                         checked = isDarkMode,
-                        onCheckedChange = { isDarkMode = it }
+                        onCheckedChange = onThemeChange // 使用傳入的函式
                     )
                 }
             }

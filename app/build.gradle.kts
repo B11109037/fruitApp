@@ -61,15 +61,14 @@ dependencies {
     implementation("com.google.android.libraries.places:places:3.3.0")//加入map中place
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")//map中目前位置
 
-
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")//http請求程式庫
     implementation("com.google.android.gms:play-services-location:21.0.1")//取得使用者的GPS定位
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation(libs.androidx.exifinterface)
-    implementation(libs.androidx.compiler)//加入 text search
+    implementation(libs.androidx.exifinterface)//加入 text search
 
 
 
@@ -90,8 +89,9 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // Retrofit with Scalar Converter
     implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.5.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.11.0")//http請求程式庫
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 
     implementation("androidx.camera:camera-camera2:1.3.0")
     implementation("androidx.camera:camera-lifecycle:1.3.0")
@@ -107,10 +107,4 @@ dependencies {
     implementation ("androidx.room:room-ktx:2.5.1")
     // Annotation Processor
     kapt ("androidx.room:room-compiler:2.5.1")
-
-}
-
-
-configurations.all {
-    exclude(group = "com.google.guava", module = "listenablefuture")
 }

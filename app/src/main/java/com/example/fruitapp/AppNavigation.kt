@@ -28,7 +28,10 @@ fun MapScreenContent(navController: NavHostController) {
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    isDarkMode: Boolean,
+    onThemeChange: (Boolean) -> Unit
+) {
     val navController = rememberNavController()
 
     NavHost(
@@ -58,7 +61,11 @@ fun AppNavigation() {
             HistoryScreen(navController = navController)
         }
         composable("user_settings") {
-            UserSettingsScreen(navController = navController)
+            UserSettingsScreen(
+                navController = navController,
+                isDarkMode = isDarkMode,
+                onThemeChange = onThemeChange
+            )
         }
     }
 }
