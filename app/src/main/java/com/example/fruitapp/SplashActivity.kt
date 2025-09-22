@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,7 +51,8 @@ fun VideoSplashScreen(onFinished: () -> Unit) {
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 100.dp), // 控制往下移
+                .fillMaxHeight(),//長寬都符合手機畫面
+//                .padding(top = 100.dp), // 控制往下移
             factory = {
                 VideoView(it).apply {
                     setVideoURI(Uri.parse("android.resource://${context.packageName}/${R.raw.app_animation}"))

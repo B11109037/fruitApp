@@ -2,6 +2,7 @@ package com.example.fruitapp
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -41,11 +42,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 
 // --------- HomeScreen ---------
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun HomeScreen(navController: NavHostController) {
-//    val drawerState = rememberDrawerState(DrawerValue.Closed)
-//    val scope = rememberCoroutineScope()
+
     val context = LocalContext.current
     // 建立圖片 launcher
     val launcher = rememberLauncherForActivityResult(
@@ -64,7 +64,6 @@ fun HomeScreen(navController: NavHostController) {
         }
     }
 
-
     // 使用 Scaffold 作為主要容器
     Scaffold(
         topBar = {
@@ -77,6 +76,7 @@ fun HomeScreen(navController: NavHostController) {
                 contentAlignment = Alignment.Center
             ) {
                 // 中間標題
+                Log.d("hhaha", "讚啦")
                 Text(
                     text = "果然會辨識",
                     style = MaterialTheme.typography.titleMedium.copy(
