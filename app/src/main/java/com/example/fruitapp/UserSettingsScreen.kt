@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,10 +24,13 @@ fun UserSettingsScreen(
     isDarkMode: Boolean,
     onThemeChange: (Boolean) -> Unit
 ) {
-//    var isDarkMode by remember { mutableStateOf(false) }
-    var isNotificationEnabled by remember { mutableStateOf(true) }
-    var isAutoUploadEnabled by remember { mutableStateOf(false) }
-    
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // 從 DataStore 讀取設定
+    val isNotificationEnabled by UserPreferences.getNotificationEnabledFlow(context).collectAsState(initial = true)
+    val isAutoUploadEnabled by UserPreferences.getAutoUploadFlow(context).collectAsState(initial = false)
+
     Scaffold(
         topBar = {
             Box(
@@ -85,15 +89,21 @@ fun UserSettingsScreen(
                         )
                     )
 
+                    // ✅ 切換主題時也寫入 DataStore
                     SettingItem(
                         title = "深色模式",
                         description = "切換應用程式為深色主題",
                         checked = isDarkMode,
-                        onCheckedChange = onThemeChange // 使用傳入的函式
+                        onCheckedChange = { enabled ->
+                            onThemeChange(enabled)
+                            scope.launch {
+                                UserPreferences.setDarkMode(context, enabled)
+                            }
+                        }
                     )
                 }
             }
-            
+
             // 通知設定
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -109,16 +119,20 @@ fun UserSettingsScreen(
                             fontWeight = FontWeight.Bold
                         )
                     )
-                    
+
                     SettingItem(
                         title = "推播通知",
-                        description = "接收辨識結果和更新通知",
+                        description = "接收辨識結果與系統更新提示",
                         checked = isNotificationEnabled,
-                        onCheckedChange = { isNotificationEnabled = it }
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                UserPreferences.setNotificationEnabled(context, enabled)
+                            }
+                        }
                     )
                 }
             }
-            
+
             // 功能設定
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -134,17 +148,21 @@ fun UserSettingsScreen(
                             fontWeight = FontWeight.Bold
                         )
                     )
-                    
+
                     SettingItem(
                         title = "自動上傳",
                         description = "拍照後自動進行辨識",
                         checked = isAutoUploadEnabled,
-                        onCheckedChange = { isAutoUploadEnabled = it }
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                UserPreferences.setAutoUpload(context, enabled)
+                            }
+                        }
                     )
                 }
             }
-            
-            // 關於
+
+            // 關於應用程式
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
@@ -182,9 +200,7 @@ private fun SettingItem(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge.copy(
@@ -197,9 +213,6 @@ private fun SettingItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

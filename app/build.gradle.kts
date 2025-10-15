@@ -107,4 +107,9 @@ dependencies {
     implementation ("androidx.room:room-ktx:2.5.1")
     // Annotation Processor
     kapt ("androidx.room:room-compiler:2.5.1")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // 協程（若專案尚未加入）
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

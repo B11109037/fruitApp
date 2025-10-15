@@ -42,7 +42,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.Executor
 
-// 新增函數：根據EXIF數據旋轉圖片
+// --- 根據 EXIF 旋轉圖片 ---
 fun rotateBitmap(bitmap: Bitmap, filePath: String): Bitmap {
     val exif = ExifInterface(filePath)
     val orientation = exif.getAttributeInt(
@@ -72,6 +72,12 @@ fun TakePhotoScreen() {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    // 讀取通知設定（決定是否顯示系統通知）
+    val notificationEnabled by UserPreferences.getNotificationEnabledFlow(context).collectAsState(initial = true)
+
+
+    // 讀取自動上傳設定
+    val autoUploadEnabled by UserPreferences.getAutoUploadFlow(context).collectAsState(initial = false)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -83,11 +89,25 @@ fun TakePhotoScreen() {
         }
     }
 
-    LaunchedEffect(Unit) {
-        permissionLauncher.launch(Manifest.permission.CAMERA)
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("⚠️ 通知權限未授予，將不顯示辨識通知")
+            }
+        }
     }
 
-    // 使用 Scaffold 包裹內容以支援 Snackbar
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(Manifest.permission.CAMERA)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        NotificationUtils.createNotificationChannel(context)
+    }
+
+    // --- Scaffold 結構 ---
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.fillMaxSize()
@@ -98,7 +118,7 @@ fun TakePhotoScreen() {
                 .padding(paddingValues)
         ) {
             if (capturedBitmap == null) {
-                // ======== 預覽與拍照區 ========
+                // --- 拍照畫面 ---
                 AndroidView(
                     modifier = Modifier
                         .fillMaxSize()
@@ -129,7 +149,7 @@ fun TakePhotoScreen() {
                     }
                 )
 
-                // 黑色底層與拍照按鈕
+                // --- 拍照按鈕 ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -137,7 +157,6 @@ fun TakePhotoScreen() {
                         .align(Alignment.BottomCenter)
                         .background(Color.Black)
                 ) {
-                    // 拍照按鈕
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -156,8 +175,59 @@ fun TakePhotoScreen() {
                                         override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                                             val bitmap =
                                                 android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                                            // 旋轉圖片到正確方向
                                             capturedBitmap = rotateBitmap(bitmap, file.absolutePath)
+
+                                            // ✅ 若啟用自動上傳，直接開始上傳
+                                            if (autoUploadEnabled) {
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("🚀 自動上傳中...")
+                                                }
+
+                                                val uploadFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+                                                FileOutputStream(uploadFile).use {
+                                                    capturedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                                                }
+
+                                                val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                                                val multipart = MultipartBody.Part.createFormData(
+                                                    "image", uploadFile.name, requestFile
+                                                )
+
+                                                RetrofitClient.apiService.uploadImage(multipart)
+                                                    .enqueue(object : Callback<UploadResponse> {
+                                                        override fun onResponse(
+                                                            call: Call<UploadResponse>,
+                                                            response: Response<UploadResponse>
+                                                        ) {
+                                                            val result = response.body()?.result ?: "⚠️ 沒有回傳內容"
+                                                            coroutineScope.launch {
+                                                                snackbarHostState.showSnackbar(result)
+                                                                withContext(Dispatchers.IO) {
+                                                                    val database = AppDatabase.getInstance(context)
+                                                                    val dao = database.recordDao()
+                                                                    dao.insert(
+                                                                        Record(
+                                                                            timestamp = System.currentTimeMillis(),
+                                                                            message = result
+                                                                        )
+                                                                    )
+                                                                }
+                                                                if (notificationEnabled) {
+                                                                    NotificationUtils.showDetectionNotification(context, result)
+                                                                }
+
+                                                                capturedBitmap = null
+                                                            }
+                                                        }
+
+                                                        override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
+                                                            coroutineScope.launch {
+                                                                snackbarHostState.showSnackbar("❌ 自動上傳失敗")
+                                                            }
+                                                            capturedBitmap = null
+                                                        }
+                                                    })
+                                            }
                                         }
 
                                         override fun onError(e: ImageCaptureException) {
@@ -172,13 +242,11 @@ fun TakePhotoScreen() {
                                 .size(90.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
-                        ) {
-                            // 可選：拍照圖示
-                        }
+                        ) {}
                     }
                 }
             } else {
-                // ======== 顯示已拍照片與底部按鈕區 ========
+                // --- 顯示照片 ---
                 Image(
                     bitmap = capturedBitmap!!.asImageBitmap(),
                     contentDescription = "已拍攝照片",
@@ -186,82 +254,88 @@ fun TakePhotoScreen() {
                         .fillMaxSize()
                         .offset(y = (-160).dp),
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(Color.Black.copy(alpha = 0.7f))
-                ) {
-                    // 底部操作按鈕區 (FAB 風格)
-                    Row(
+
+                // --- 下方操作按鈕區 ---
+                if (!autoUploadEnabled) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 32.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.Bottom
+                            .height(250.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(Color.Black.copy(alpha = 0.7f))
                     ) {
-                        // 使用 FAB
-                        FloatingActionButton(
-                            onClick = {
-                                val file = File.createTempFile("upload_", ".jpg", context.cacheDir)
-                                FileOutputStream(file).use {
-                                    capturedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, it)
-                                }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 32.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            FloatingActionButton(
+                                onClick = {
+                                    val file = File.createTempFile("upload_", ".jpg", context.cacheDir)
+                                    FileOutputStream(file).use {
+                                        capturedBitmap!!.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                                    }
 
-                                val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                                val multipart = MultipartBody.Part.createFormData("image", file.name, requestFile)
+                                    val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                                    val multipart =
+                                        MultipartBody.Part.createFormData("image", file.name, requestFile)
 
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("🚀 偵測中...")
-                                }
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("🚀 偵測中...")
+                                    }
 
-                                RetrofitClient.apiService.uploadImage(multipart)
-                                    .enqueue(object : Callback<UploadResponse> {
-                                        override fun onResponse(
-                                            call: Call<UploadResponse>,
-                                            response: Response<UploadResponse>
-                                        ) {
-                                            val result = response.body()?.result ?: "⚠️ 沒有回傳內容"
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(result)
-                                                withContext(Dispatchers.IO) {
-                                                    val database = AppDatabase.getInstance(context)
-                                                    val dao = database.recordDao()
-                                                    dao.insert(
-                                                        Record(
-                                                            timestamp = System.currentTimeMillis(),
-                                                            message = result
+                                    RetrofitClient.apiService.uploadImage(multipart)
+                                        .enqueue(object : Callback<UploadResponse> {
+                                            override fun onResponse(
+                                                call: Call<UploadResponse>,
+                                                response: Response<UploadResponse>
+                                            ) {
+                                                val result = response.body()?.result ?: "⚠️ 沒有回傳內容"
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar(result)
+                                                    withContext(Dispatchers.IO) {
+                                                        val database = AppDatabase.getInstance(context)
+                                                        database.recordDao().insert(
+                                                            Record(
+                                                                timestamp = System.currentTimeMillis(),
+                                                                message = result
+                                                            )
                                                         )
-                                                    )
+                                                    }
+                                                    if (notificationEnabled) {
+                                                        NotificationUtils.showDetectionNotification(context, result)
+                                                    }
+                                                    capturedBitmap = null
                                                 }
                                             }
-                                        }
 
-                                        override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("❌ 上傳失敗")
+                                            override fun onFailure(call: Call<UploadResponse>, t: Throwable) {
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("❌ 上傳失敗")
+                                                }
+                                                capturedBitmap = null
                                             }
-                                        }
-                                    })
-                            },
-                            shape = CircleShape,
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.White,
-                            modifier = Modifier.size(70.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = "使用")
-                        }
+                                        })
+                                },
+                                shape = CircleShape,
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White,
+                                modifier = Modifier.size(70.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Check, contentDescription = "使用")
+                            }
 
-                        // 重新拍攝 FAB
-                        FloatingActionButton(
-                            onClick = { capturedBitmap = null },
-                            shape = CircleShape,
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = Color.White,
-                            modifier = Modifier.size(70.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = "重新拍攝")
+                            FloatingActionButton(
+                                onClick = { capturedBitmap = null },
+                                shape = CircleShape,
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                contentColor = Color.White,
+                                modifier = Modifier.size(70.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Refresh, contentDescription = "重新拍攝")
+                            }
                         }
                     }
                 }

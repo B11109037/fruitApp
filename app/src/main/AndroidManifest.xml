@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 <!--找到使用者定位的權限-->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 
     <application

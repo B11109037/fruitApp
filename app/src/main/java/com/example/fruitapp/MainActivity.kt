@@ -1,38 +1,47 @@
-// MainActivity.kt
 package com.example.fruitapp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.fruitapp.ui.theme.FruitAppTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // 在這裡定義深色模式的狀態
-            var isDarkMode by remember { mutableStateOf(false) }
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
 
-            // 將狀態傳遞給 FruitAppTheme
+            // 從 DataStore 讀取深色模式設定
+            val isDarkMode by UserPreferences.getDarkModeFlow(context).collectAsState(initial = false)
+
+            // 切換主題時，同步寫入 DataStore
+            val onThemeChange: (Boolean) -> Unit = { enabled ->
+                scope.launch {
+                    UserPreferences.setDarkMode(context, enabled)
+                }
+            }
+
+            // 使用 DataStore 的值控制主題
             FruitAppTheme(darkTheme = isDarkMode) {
                 AppNavigation(
                     isDarkMode = isDarkMode,
-                    onThemeChange = { isDarkMode = it }
+                    onThemeChange = onThemeChange
                 )
             }
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
