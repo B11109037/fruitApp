@@ -20,12 +20,7 @@ fun HomeScreenContent(navController: NavHostController) {
     }
 }
 
-@Composable
-fun MapScreenContent(navController: NavHostController) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        MapScreen(navController = navController)
-    }
-}
+
 
 @Composable
 fun AppNavigation(
